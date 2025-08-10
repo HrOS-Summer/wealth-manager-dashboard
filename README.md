@@ -30,19 +30,23 @@ To run this project locally, follow these steps:
 
     Open [http://localhost:3000](https://www.google.com/search?q=http://localhost:3000) in your browser to see the dashboard.
 
-### Project Structure
-
-The project follows the standard Next.js App Router structure with a `src/` directory for all source code.
-
 src/
-├── app/                  # Next.js App Router files
-│   ├── api/              # API routes for data endpoints
-│   ├── layout.tsx        # Main application layout
-│   └── page.tsx          # Main dashboard page
-├── components/           # Reusable UI components
-├── lib/                  # Backend logic, static data, and utility functions
-├── public/               # Public assets (e.g., favicon)
-└── styles/               # Global CSS file
+├── app/                  # Contains main application logic, pages, and API routes.
+│   ├── api/              # API routes for data endpoints (e.g., /api/portfolio/summary).
+│   ├── layout.tsx        # The main root layout for the application.
+│   └── page.tsx          # The primary dashboard page component.
+├── components/           # Reusable React components used throughout the application.
+│   ├── layout/           # Components for page structure and visual blocks.
+│   ├── charts/           # Components for data visualizations (e.g., Pie charts)
+│   └── table/            # Components for displaying tabular data.
+├── lib/                  # Backend logic, utility functions, and static data.
+│   ├── types.ts          # TypeScript type definitions for data structures.
+│   ├── data.ts           # Static mock data for the portfolio.
+│   ├── calc.ts           # Functions for all data calculations and metrics.
+│   └── validate.ts       # Functions for data validation.
+├── public/               # Static assets like images, fonts, and the favicon.
+└── styles/               # Global CSS files and Tailwind configuration.
+
 
 
 ### Data & Calculations
