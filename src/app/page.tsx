@@ -1,113 +1,154 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import React, { useEffect, useState } from "react";
+import PageShell from "@/components/layout/PageShell";
+import Section from "@/components/layout/Section";
+import StatCard from "@/components/layout/StatCard";
+import SectorPie from "@/components/charts/SectorPie";
+import MarketCapPie from "@/components/charts/MarketCapPie";
+import PerformanceLine from "@/components/charts/PerformanceLine";
+import HoldingsTable from "@/components/table/HoldingsTable";
+import ErrorBlock from "@/components/layout/ErrorBlock";
+import LoadingBlock from "@/components/layout/LoadingBlock";
+import { Banknote, TrendingUp, PieChart as PieIcon, Layers } from "lucide-react";
+import { formatCurrency, pct, gainColor } from "@/lib/format";
+import type {
+  AllocationResponse,
+  HoldingComputed,
+  PerformanceResponse,
+  SummaryResponse,
+} from "@/lib/types";
+import TopPerformers from "@/components/layout/TopPerformers";
+
+// Helper component for the Metric Cards in the Performance section
+function MetricCard({ title, data, color }: { title: string; data: Record<string, number>; color: string }) {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:size-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
+    <div className="rounded-lg border p-4 bg-white">
+      <div className="text-sm text-neutral-500">{title}</div>
+      <div className={`flex gap-4 mt-2 ${color}`}>
+        <div>1M: {data?.["1month"] != null ? `${data["1month"].toFixed(2)}%` : "-"}</div>
+        <div>3M: {data?.["3months"] != null ? `${data["3months"].toFixed(2)}%` : "-"}</div>
+        <div>1Y: {data?.["1year"] != null ? `${data["1year"].toFixed(2)}%` : "-"}</div>
       </div>
+    </div>
+  );
+}
 
-      <div className="relative z-[-1] flex place-items-center before:absolute before:h-[300px] before:w-full before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 sm:before:w-[480px] sm:after:w-[240px] before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
+export default function Page() {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [holdings, setHoldings] = useState<HoldingComputed[]>([]);
+  const [allocation, setAllocation] = useState<AllocationResponse>({ bySector: {}, byMarketCap: {} });
+  const [performance, setPerformance] = useState<PerformanceResponse>({
+    timeline: [],
+    returns: {
+      portfolio: {} as any,
+      nifty50: {} as any,
+      gold: {} as any
+    }
+  });
+  const [summary, setSummary] = useState<SummaryResponse | null>(null);
 
-      <div className="mb-32 grid text-center lg:mb-0 lg:w-full lg:max-w-5xl lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
+  const fetchAll = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [h, a, p, s] = await Promise.all([
+        fetch("/api/portfolio/holdings").then(r => r.json()),
+        fetch("/api/portfolio/allocation").then(r => r.json()),
+        fetch("/api/portfolio/performance").then(r => r.json()),
+        fetch("/api/portfolio/summary").then(r => r.json()),
+      ]);
 
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
+      if (h.error || a.error || p.error || s.error) {
+        throw new Error(h.error || a.error || p.error || s.error || "Failed");
+      }
 
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Explore starter templates for Next.js.
-          </p>
-        </a>
+      setHoldings(h);
+      setAllocation(a);
+      setPerformance(p);
+      setSummary(s);
+    } catch (e: any) {
+      setError(e.message || "Failed to load data");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-balance text-sm opacity-50">
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+  useEffect(() => {
+    fetchAll();
+  }, []);
+
+  const cards = [
+    { 
+      icon: Banknote, 
+      label: "Total Portfolio Value", 
+      value: summary ? formatCurrency(summary.totalValue)! : "-", 
+      emphasize: true 
+    },
+    { 
+      icon: TrendingUp, 
+      label: "Total Gain/Loss", 
+      value: summary ? formatCurrency(summary.totalGainLoss)! : "-", 
+      delta: summary?.totalGainLossPercent ?? null 
+    },
+    { 
+      icon: PieIcon, 
+      label: "Portfolio Performance %", 
+      value: summary ? pct(summary.totalGainLossPercent) : "-" 
+    },
+    { 
+      icon: Layers, 
+      label: "Number of Holdings", 
+      value: summary?.numberOfHoldings ?? 0 
+    },
+  ];
+
+  return (
+    <PageShell>
+      {error ? (
+        <ErrorBlock message={error} onRetry={fetchAll} />
+      ) : loading ? (
+        <LoadingBlock />
+      ) : (
+        <>
+          <div className="grid md:grid-cols-4 gap-4 mb-4">
+            {cards.map((c, i) => (
+              <StatCard key={i} {...c} />
+            ))}
+          </div>
+
+          <Section title="Asset Allocation" subtitle="Distribution by sector and market cap">
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <div className="text-sm font-medium mb-2">By Sector</div>
+                <SectorPie data={allocation.bySector} />
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-2">By Market Cap</div>
+                <MarketCapPie data={allocation.byMarketCap} />
+              </div>
+            </div>
+          </Section>
+
+          <Section title="Holdings" subtitle="Sortable and searchable holdings table">
+            <HoldingsTable data={holdings} />
+          </Section>
+
+          <Section title="Performance Comparison" subtitle="Portfolio vs Nifty 50 vs Gold">
+            <PerformanceLine timeline={performance.timeline} />
+            <div className="grid md:grid-cols-3 gap-4 mt-4">
+              <MetricCard title="Portfolio" data={performance.returns.portfolio} color="text-blue-600" />
+              <MetricCard title="Nifty 50" data={performance.returns.nifty50} color="text-green-600" />
+              <MetricCard title="Gold" data={performance.returns.gold} color="text-amber-600" />
+            </div>
+          </Section>
+
+          <Section title="Top Performers & Insights" subtitle="Best/worst performers, diversification score, risk level">
+            <TopPerformers summary={summary!} />
+          </Section>
+        </>
+      )}
+    </PageShell>
   );
 }
