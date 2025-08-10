@@ -12,16 +12,15 @@ export default function SectorPie({ data }: Props) {
 
   return (
     <div>
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width="100%" height={200} className="sm:h-280">
         <PieChart>
           <Pie
             data={pie}
             dataKey="value"
             nameKey="name"
-            innerRadius={60}
-            outerRadius={100}
+            innerRadius={40} // Smaller inner radius for mobile
+            outerRadius={80} // Smaller outer radius for mobile
             paddingAngle={2}
-            // Remove the default label to clear the clutter
             label={false}
             labelLine={false}
           >
@@ -39,7 +38,7 @@ export default function SectorPie({ data }: Props) {
       </ResponsiveContainer>
 
       {/* Custom, responsive legend below the chart */}
-      <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm mt-4">
+      <div className="flex flex-col items-center justify-center gap-y-2 text-sm mt-4 md:flex-wrap md:flex-row md:gap-x-6">
         {pie.map((entry, index) => (
           <div key={`legend-${index}`} className="flex items-center gap-2">
             <div
